@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auto Loan Calculator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-deep: #1a1915;
+            --bg-surface: #252320;
+            --bg-elevated: #2d2a26;
+            --bg-input: #1f1e1a;
+            --border-subtle: #3d3a35;
+            --border-medium: #4a4640;
+            --border-focus: #e6a23c;
+            --text-primary: #f5f0e6;
+            --text-secondary: #a89f8c;
+            --text-muted: #6b6358;
+            --accent-amber: #e6a23c;
+            --accent-amber-dim: #b8832f;
+            --accent-amber-glow: rgba(230, 162, 60, 0.15);
+            --accent-green: #4ade80;
+            --accent-green-dim: #22c55e;
+            --grid-color: rgba(230, 162, 60, 0.06);
+            --grid-accent: rgba(230, 162, 60, 0.12);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html {
+            font-size: 16px;
+        }
+
+        body {
+            font-family: 'Source Serif 4', Georgia, serif;
+            background: var(--bg-deep);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.6;
+            padding: 24px 16px 48px;
+        }
+
+        /* Blueprint grid background */
+        .blueprint-bg {
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(var(--grid-color) 1px, transparent 1px),
+                linear-gradient(90deg, var(--grid-color) 1px, transparent 1px),
+                linear-gradient(var(--grid-accent) 1px, transparent 1px),
+                linear-gradient(90deg, var(--grid-accent) 1px, transparent 1px);
+            background-size:
+                20px 20px,
+                20px 20px,
+                100px 100px,
+                100px 100px;
+            pointer-events: none;
+            opacity: 0.8;
+        }
+
+        .container {
+            position: relative;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        .header {
+            margin-bottom: 32px;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            text-decoration: none;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 16px;
+            transition: color 0.2s;
+        }
+
+        .back-link:hover {
+            color: var(--accent-amber);
+        }
+
+        .back-link svg {
+            width: 14px;
+            height: 14px;
+            transition: transform 0.2s;
+        }
+
+        .back-link:hover svg {
+            transform: translateX(-3px);
+        }
+
+        .header h1 {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.75rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            font-size: 1rem;
+        }
+
+        /* Calculator card */
+        .calculator {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: 16px;
+            overflow: hidden;
+            animation: fadeIn 0.5s ease-out 0.1s both;
+        }
+
+        /* Mode toggle */
+        .mode-toggle {
+            display: flex;
+            background: var(--bg-deep);
+            border-bottom: 1px solid var(--border-subtle);
+            padding: 4px;
+            gap: 4px;
+        }
+
+        .mode-toggle button {
+            flex: 1;
+            padding: 12px 16px;
+            border: none;
+            background: transparent;
+            border-radius: 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .mode-toggle button:hover:not(.active) {
+            color: var(--text-secondary);
+            background: var(--bg-surface);
+        }
+
+        .mode-toggle button.active {
+            background: var(--accent-amber);
+            color: var(--bg-deep);
+            font-weight: 600;
+        }
+
+        /* Content layout */
+        .content {
+            padding: 24px;
+        }
+
+        @media (min-width: 768px) {
+            .content {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 32px;
+                padding: 32px;
+            }
+        }
+
+        /* Input sections */
+        .inputs-column {
+            margin-bottom: 24px;
+        }
+
+        @media (min-width: 768px) {
+            .inputs-column {
+                margin-bottom: 0;
+            }
+        }
+
+        .section-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--accent-amber);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-title::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border-subtle);
+        }
+
+        /* Input groups */
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .input-wrapper {
+            position: relative;
+        }
+
+        .input-wrapper .prefix,
+        .input-wrapper .suffix {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            pointer-events: none;
+        }
+
+        .input-wrapper .prefix {
+            left: 14px;
+        }
+
+        .input-wrapper .suffix {
+            right: 14px;
+        }
+
+        .input-wrapper input[type="number"] {
+            width: 100%;
+            padding: 12px 14px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.95rem;
+            color: var(--text-primary);
+            background: var(--bg-input);
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            outline: none;
+            transition: all 0.2s;
+            -moz-appearance: textfield;
+        }
+
+        .input-wrapper input[type="number"]::-webkit-outer-spin-button,
+        .input-wrapper input[type="number"]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        .input-wrapper input[type="number"]:focus {
+            border-color: var(--accent-amber);
+            box-shadow: 0 0 0 3px var(--accent-amber-glow);
+        }
+
+        .input-wrapper.has-prefix input {
+            padding-left: 32px;
+        }
+
+        .input-wrapper.has-suffix input {
+            padding-right: 60px;
+        }
+
+        /* Sliders */
+        .slider-container {
+            margin-top: 10px;
+        }
+
+        .slider-container input[type="range"] {
+            width: 100%;
+            height: 4px;
+            border-radius: 2px;
+            background: var(--border-subtle);
+            outline: none;
+            -webkit-appearance: none;
+            cursor: pointer;
+        }
+
+        .slider-container input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--accent-amber);
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(230, 162, 60, 0.4);
+            transition: transform 0.15s, box-shadow 0.15s;
+        }
+
+        .slider-container input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.15);
+            box-shadow: 0 2px 12px rgba(230, 162, 60, 0.5);
+        }
+
+        .slider-container input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border: none;
+            border-radius: 50%;
+            background: var(--accent-amber);
+            cursor: pointer;
+        }
+
+        .slider-labels {
+            display: flex;
+            justify-content: space-between;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            margin-top: 6px;
+        }
+
+        /* Results */
+        .results-column {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .results {
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            padding: 20px;
+            flex: 1;
+        }
+
+        .result-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .result-row:last-child {
+            border-bottom: none;
+        }
+
+        .result-row .label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .result-row .value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        /* Comparison table */
+        .comparison-header {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr 1fr;
+            gap: 8px;
+            padding: 12px 0 8px 0;
+            border-bottom: 2px solid var(--border-medium);
+            margin-top: 8px;
+        }
+
+        .comparison-header span {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.65rem;
+            font-weight: 600;
+            color: var(--accent-amber);
+            text-align: right;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .comparison-header span:first-child {
+            text-align: left;
+        }
+
+        .result-row.comparison {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr 1fr;
+            gap: 8px;
+        }
+
+        .result-row.comparison .value {
+            text-align: right;
+            font-size: 0.85rem;
+        }
+
+        /* Highlight row */
+        .result-row.highlight-row {
+            background: linear-gradient(135deg, var(--accent-amber), var(--accent-amber-dim));
+            margin: 16px -20px -20px -20px;
+            padding: 16px 20px;
+            border-radius: 0 0 11px 11px;
+            border-bottom: none;
+        }
+
+        .result-row.highlight-row .label,
+        .result-row.highlight-row .value {
+            color: var(--bg-deep);
+            font-weight: 600;
+        }
+
+        /* Shared inputs row */
+        .shared-inputs {
+            margin-top: 24px;
+            padding-top: 24px;
+            border-top: 1px solid var(--border-subtle);
+        }
+
+        @media (min-width: 768px) {
+            .shared-inputs {
+                grid-column: 1 / -1;
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 20px;
+                margin-top: 0;
+                padding-top: 24px;
+            }
+
+            .shared-inputs .input-group {
+                margin-bottom: 0;
+            }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* Animations */
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .inputs-column,
+        .results-column {
+            animation: slideIn 0.4s ease-out 0.15s both;
+        }
+
+        .results-column {
+            animation-delay: 0.2s;
+        }
+
+        /* Mobile adjustments */
+        @media (max-width: 767px) {
+            body {
+                padding: 16px 12px 32px;
+            }
+
+            .header h1 {
+                font-size: 1.5rem;
+            }
+
+            .mode-toggle button {
+                font-size: 0.7rem;
+                padding: 10px 12px;
+            }
+
+            .content {
+                padding: 20px 16px;
+            }
+
+            .shared-inputs {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 16px;
+            }
+
+            .shared-inputs .input-group:last-child {
+                grid-column: 1 / -1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="blueprint-bg"></div>
+
+    <div class="container">
+        <div class="header">
+            <a href="../" class="back-link">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+                Back to Tools
+            </a>
+            <h1>Auto Loan Calculator</h1>
+            <p>Calculate payments or find your max budget</p>
+        </div>
+
+        <div class="calculator">
+            <div class="mode-toggle">
+                <button class="active" onclick="setMode('payment')">Calculate Payment</button>
+                <button onclick="setMode('maxloan')">Max Loan Amount</button>
+            </div>
+
+            <div class="content">
+                <!-- Left Column: Mode-specific Inputs -->
+                <div class="inputs-column">
+                    <div class="section-title">Inputs</div>
+
+                    <!-- Payment Mode Inputs -->
+                    <div id="payment-inputs">
+                        <div class="input-group">
+                            <label>Vehicle Price</label>
+                            <div class="input-wrapper has-prefix">
+                                <span class="prefix">$</span>
+                                <input type="number" id="vehicle-price" value="35000" oninput="calculate()">
+                            </div>
+                        </div>
+
+                        <div class="input-group">
+                            <label>Trade-In Value</label>
+                            <div class="input-wrapper has-prefix">
+                                <span class="prefix">$</span>
+                                <input type="number" id="trade-in-value" value="0" oninput="calculate()">
+                            </div>
+                        </div>
+
+                        <div class="input-group">
+                            <label>Trade-In Payoff</label>
+                            <div class="input-wrapper has-prefix">
+                                <span class="prefix">$</span>
+                                <input type="number" id="trade-in-payoff" value="0" oninput="calculate()">
+                            </div>
+                        </div>
+
+                        <div class="input-group">
+                            <label>Down Payment</label>
+                            <div class="input-wrapper has-prefix">
+                                <span class="prefix">$</span>
+                                <input type="number" id="down-payment" value="5000" oninput="calculate()">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Max Loan Mode Inputs -->
+                    <div id="maxloan-inputs" class="hidden">
+                        <div class="input-group">
+                            <label>Max Monthly Payment</label>
+                            <div class="input-wrapper has-prefix">
+                                <span class="prefix">$</span>
+                                <input type="number" id="max-payment" value="500" oninput="calculate()">
+                            </div>
+                        </div>
+
+                        <div class="input-group">
+                            <label>Trade-In Value</label>
+                            <div class="input-wrapper has-prefix">
+                                <span class="prefix">$</span>
+                                <input type="number" id="max-trade-in-value" value="0" oninput="calculate()">
+                            </div>
+                        </div>
+
+                        <div class="input-group">
+                            <label>Trade-In Payoff</label>
+                            <div class="input-wrapper has-prefix">
+                                <span class="prefix">$</span>
+                                <input type="number" id="max-trade-in-payoff" value="0" oninput="calculate()">
+                            </div>
+                        </div>
+
+                        <div class="input-group">
+                            <label>Down Payment</label>
+                            <div class="input-wrapper has-prefix">
+                                <span class="prefix">$</span>
+                                <input type="number" id="available-down" value="5000" oninput="calculate()">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Results -->
+                <div class="results-column">
+                    <div class="section-title">Results</div>
+
+                    <!-- Payment Mode Results -->
+                    <div id="payment-results" class="results">
+                        <div class="result-row">
+                            <span class="label">Trade-In Equity</span>
+                            <span class="value" id="trade-in-equity">$0</span>
+                        </div>
+
+                        <div class="comparison-header">
+                            <span></span>
+                            <span>New</span>
+                            <span>Used</span>
+                        </div>
+
+                        <div class="result-row comparison">
+                            <span class="label">Sales Tax</span>
+                            <span class="value" id="sales-tax-new">$2,100</span>
+                            <span class="value" id="sales-tax-used">$2,450</span>
+                        </div>
+                        <div class="result-row comparison">
+                            <span class="label">Loan Amount</span>
+                            <span class="value" id="loan-amount-new">$32,100</span>
+                            <span class="value" id="loan-amount-used">$32,450</span>
+                        </div>
+                        <div class="result-row comparison">
+                            <span class="label">Total Interest</span>
+                            <span class="value" id="total-interest-new">$5,143</span>
+                            <span class="value" id="total-interest-used">$5,200</span>
+                        </div>
+                        <div class="result-row comparison">
+                            <span class="label">Total Cost</span>
+                            <span class="value" id="total-cost-new">$37,243</span>
+                            <span class="value" id="total-cost-used">$37,650</span>
+                        </div>
+                        <div class="result-row comparison highlight-row">
+                            <span class="label">Monthly</span>
+                            <span class="value" id="monthly-payment-new">$621</span>
+                            <span class="value" id="monthly-payment-used">$627</span>
+                        </div>
+                    </div>
+
+                    <!-- Max Loan Mode Results -->
+                    <div id="maxloan-results" class="results hidden">
+                        <div class="result-row">
+                            <span class="label">Trade-In Equity</span>
+                            <span class="value" id="max-trade-in-equity">$0</span>
+                        </div>
+                        <div class="result-row">
+                            <span class="label">Max Loan Amount</span>
+                            <span class="value" id="max-loan-amount">$25,623</span>
+                        </div>
+                        <div class="result-row">
+                            <span class="label">Total Interest</span>
+                            <span class="value" id="max-total-interest">$4,377</span>
+                        </div>
+                        <div class="result-row">
+                            <span class="label">Total Payments</span>
+                            <span class="value" id="max-total-payments">$30,000</span>
+                        </div>
+
+                        <div class="comparison-header">
+                            <span></span>
+                            <span>New</span>
+                            <span>Used</span>
+                        </div>
+
+                        <div class="result-row comparison">
+                            <span class="label">Sales Tax</span>
+                            <span class="value" id="max-sales-tax-new">$1,500</span>
+                            <span class="value" id="max-sales-tax-used">$1,676</span>
+                        </div>
+                        <div class="result-row comparison highlight-row">
+                            <span class="label">Max Price</span>
+                            <span class="value" id="max-vehicle-price-new">$29,500</span>
+                            <span class="value" id="max-vehicle-price-used">$28,947</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Shared Inputs -->
+                <div class="shared-inputs">
+                    <div class="input-group">
+                        <label>Interest Rate (APR)</label>
+                        <div class="input-wrapper has-suffix">
+                            <input type="number" id="interest-rate" value="6.5" step="0.1" oninput="syncSlider('rate'); calculate()">
+                            <span class="suffix">%</span>
+                        </div>
+                        <div class="slider-container">
+                            <input type="range" id="rate-slider" min="0" max="20" step="0.1" value="6.5" oninput="syncInput('rate'); calculate()">
+                            <div class="slider-labels">
+                                <span>0%</span>
+                                <span>20%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        <label>Loan Term</label>
+                        <div class="input-wrapper has-suffix">
+                            <input type="number" id="loan-term" value="60" oninput="syncSlider('term'); calculate()">
+                            <span class="suffix">mo</span>
+                        </div>
+                        <div class="slider-container">
+                            <input type="range" id="term-slider" min="12" max="84" step="12" value="60" oninput="syncInput('term'); calculate()">
+                            <div class="slider-labels">
+                                <span>12</span>
+                                <span>84</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        <label>Sales Tax Rate</label>
+                        <div class="input-wrapper has-suffix">
+                            <input type="number" id="sales-tax" value="7" step="0.1" oninput="syncSlider('tax'); calculate()">
+                            <span class="suffix">%</span>
+                        </div>
+                        <div class="slider-container">
+                            <input type="range" id="tax-slider" min="0" max="12" step="0.1" value="7" oninput="syncInput('tax'); calculate()">
+                            <div class="slider-labels">
+                                <span>0%</span>
+                                <span>12%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        <label>Title & Fees</label>
+                        <div class="input-wrapper has-prefix">
+                            <span class="prefix">$</span>
+                            <input type="number" id="title-fees" value="250" oninput="calculate()">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State
+        let currentMode = 'payment';
+
+        // DOM Element Cache
+        const elements = {
+            modeButtons: () => document.querySelectorAll('.mode-toggle button'),
+            paymentInputs: document.getElementById('payment-inputs'),
+            maxloanInputs: document.getElementById('maxloan-inputs'),
+            paymentResults: document.getElementById('payment-results'),
+            maxloanResults: document.getElementById('maxloan-results'),
+            interestRate: document.getElementById('interest-rate'),
+            rateSlider: document.getElementById('rate-slider'),
+            salesTax: document.getElementById('sales-tax'),
+            taxSlider: document.getElementById('tax-slider'),
+            loanTerm: document.getElementById('loan-term'),
+            termSlider: document.getElementById('term-slider'),
+            titleFees: document.getElementById('title-fees'),
+            vehiclePrice: document.getElementById('vehicle-price'),
+            downPayment: document.getElementById('down-payment'),
+            tradeInValue: document.getElementById('trade-in-value'),
+            tradeInPayoff: document.getElementById('trade-in-payoff'),
+            maxPayment: document.getElementById('max-payment'),
+            availableDown: document.getElementById('available-down'),
+            maxTradeInValue: document.getElementById('max-trade-in-value'),
+            maxTradeInPayoff: document.getElementById('max-trade-in-payoff')
+        };
+
+        const sliderPairs = {
+            rate: { input: elements.interestRate, slider: elements.rateSlider },
+            tax: { input: elements.salesTax, slider: elements.taxSlider },
+            term: { input: elements.loanTerm, slider: elements.termSlider }
+        };
+
+        // Mode Switching
+        function setMode(mode) {
+            if (currentMode !== mode) {
+                const fromPayment = currentMode === 'payment';
+                const source = {
+                    tradeIn: fromPayment ? elements.tradeInValue : elements.maxTradeInValue,
+                    payoff: fromPayment ? elements.tradeInPayoff : elements.maxTradeInPayoff,
+                    down: fromPayment ? elements.downPayment : elements.availableDown
+                };
+                const target = {
+                    tradeIn: fromPayment ? elements.maxTradeInValue : elements.tradeInValue,
+                    payoff: fromPayment ? elements.maxTradeInPayoff : elements.tradeInPayoff,
+                    down: fromPayment ? elements.availableDown : elements.downPayment
+                };
+
+                target.tradeIn.value = source.tradeIn.value;
+                target.payoff.value = source.payoff.value;
+                target.down.value = source.down.value;
+            }
+
+            currentMode = mode;
+
+            elements.modeButtons().forEach((btn, index) => {
+                const isActive = (index === 0 && mode === 'payment') || (index === 1 && mode === 'maxloan');
+                btn.classList.toggle('active', isActive);
+            });
+
+            const isPayment = mode === 'payment';
+            elements.paymentInputs.classList.toggle('hidden', !isPayment);
+            elements.maxloanInputs.classList.toggle('hidden', isPayment);
+            elements.paymentResults.classList.toggle('hidden', !isPayment);
+            elements.maxloanResults.classList.toggle('hidden', isPayment);
+
+            calculate();
+        }
+
+        // Slider/Input Sync
+        function syncSlider(type) {
+            const pair = sliderPairs[type];
+            if (pair) pair.slider.value = pair.input.value;
+        }
+
+        function syncInput(type) {
+            const pair = sliderPairs[type];
+            if (pair) pair.input.value = pair.slider.value;
+        }
+
+        // Formatting
+        function formatCurrency(amount) {
+            const sign = amount < 0 ? '-' : '';
+            return sign + '$' + Math.abs(Math.round(amount)).toLocaleString('en-US');
+        }
+
+        // Loan Calculations
+        function calculateMonthlyPayment(principal, monthlyRate, months) {
+            if (monthlyRate === 0) return principal / months;
+            const factor = Math.pow(1 + monthlyRate, months);
+            return principal * (monthlyRate * factor) / (factor - 1);
+        }
+
+        function calculateMaxLoan(payment, monthlyRate, months) {
+            if (monthlyRate === 0) return payment * months;
+            const factor = Math.pow(1 + monthlyRate, months);
+            return payment * (factor - 1) / (monthlyRate * factor);
+        }
+
+        // Main Calculation
+        function calculate() {
+            const annualRate = parseFloat(elements.interestRate.value) || 0;
+            const monthlyRate = annualRate / 100 / 12;
+            const term = parseInt(elements.loanTerm.value) || 60;
+            const taxRateDecimal = (parseFloat(elements.salesTax.value) || 0) / 100;
+            const titleFees = parseFloat(elements.titleFees.value) || 0;
+
+            if (currentMode === 'payment') {
+                calculatePaymentMode(monthlyRate, term, taxRateDecimal, titleFees);
+            } else {
+                calculateMaxLoanMode(monthlyRate, term, taxRateDecimal, titleFees);
+            }
+        }
+
+        function calculatePaymentMode(monthlyRate, term, taxRateDecimal, titleFees) {
+            const price = parseFloat(elements.vehiclePrice.value) || 0;
+            const down = parseFloat(elements.downPayment.value) || 0;
+            const tradeInValue = parseFloat(elements.tradeInValue.value) || 0;
+            const tradeInPayoff = parseFloat(elements.tradeInPayoff.value) || 0;
+            const tradeInEquity = tradeInValue - tradeInPayoff;
+
+            // NEW vehicle: trade-in reduces taxable amount
+            const taxableNew = Math.max(0, price - tradeInValue);
+            const salesTaxNew = taxableNew * taxRateDecimal;
+            const loanAmountNew = Math.max(0, price + salesTaxNew + titleFees - down - tradeInEquity);
+            const monthlyPaymentNew = calculateMonthlyPayment(loanAmountNew, monthlyRate, term);
+            const totalCostNew = monthlyPaymentNew * term;
+            const totalInterestNew = totalCostNew - loanAmountNew;
+
+            // USED vehicle: tax on full price
+            const salesTaxUsed = price * taxRateDecimal;
+            const loanAmountUsed = Math.max(0, price + salesTaxUsed + titleFees - down - tradeInEquity);
+            const monthlyPaymentUsed = calculateMonthlyPayment(loanAmountUsed, monthlyRate, term);
+            const totalCostUsed = monthlyPaymentUsed * term;
+            const totalInterestUsed = totalCostUsed - loanAmountUsed;
+
+            document.getElementById('trade-in-equity').textContent = formatCurrency(tradeInEquity);
+            document.getElementById('sales-tax-new').textContent = formatCurrency(salesTaxNew);
+            document.getElementById('sales-tax-used').textContent = formatCurrency(salesTaxUsed);
+            document.getElementById('loan-amount-new').textContent = formatCurrency(loanAmountNew);
+            document.getElementById('loan-amount-used').textContent = formatCurrency(loanAmountUsed);
+            document.getElementById('total-interest-new').textContent = formatCurrency(totalInterestNew);
+            document.getElementById('total-interest-used').textContent = formatCurrency(totalInterestUsed);
+            document.getElementById('total-cost-new').textContent = formatCurrency(totalCostNew);
+            document.getElementById('total-cost-used').textContent = formatCurrency(totalCostUsed);
+            document.getElementById('monthly-payment-new').textContent = formatCurrency(monthlyPaymentNew);
+            document.getElementById('monthly-payment-used').textContent = formatCurrency(monthlyPaymentUsed);
+        }
+
+        function calculateMaxLoanMode(monthlyRate, term, taxRateDecimal, titleFees) {
+            const maxPayment = parseFloat(elements.maxPayment.value) || 0;
+            const availableDown = parseFloat(elements.availableDown.value) || 0;
+            const tradeInValue = parseFloat(elements.maxTradeInValue.value) || 0;
+            const tradeInPayoff = parseFloat(elements.maxTradeInPayoff.value) || 0;
+            const tradeInEquity = tradeInValue - tradeInPayoff;
+
+            const maxLoan = calculateMaxLoan(maxPayment, monthlyRate, term);
+            const totalPayments = maxPayment * term;
+            const totalInterest = totalPayments - maxLoan;
+            const totalFunds = maxLoan + availableDown + tradeInEquity - titleFees;
+
+            // NEW vehicle
+            const maxPriceNew = (totalFunds + tradeInValue * taxRateDecimal) / (1 + taxRateDecimal);
+            const taxableNew = Math.max(0, maxPriceNew - tradeInValue);
+            const salesTaxNew = taxableNew * taxRateDecimal;
+
+            // USED vehicle
+            const maxPriceUsed = totalFunds / (1 + taxRateDecimal);
+            const salesTaxUsed = maxPriceUsed * taxRateDecimal;
+
+            document.getElementById('max-trade-in-equity').textContent = formatCurrency(tradeInEquity);
+            document.getElementById('max-loan-amount').textContent = formatCurrency(maxLoan);
+            document.getElementById('max-total-interest').textContent = formatCurrency(totalInterest);
+            document.getElementById('max-total-payments').textContent = formatCurrency(totalPayments);
+            document.getElementById('max-sales-tax-new').textContent = formatCurrency(salesTaxNew);
+            document.getElementById('max-sales-tax-used').textContent = formatCurrency(salesTaxUsed);
+            document.getElementById('max-vehicle-price-new').textContent = formatCurrency(maxPriceNew);
+            document.getElementById('max-vehicle-price-used').textContent = formatCurrency(maxPriceUsed);
+        }
+
+        // Initialize
+        calculate();
+    </script>
+</body>
+</html>
